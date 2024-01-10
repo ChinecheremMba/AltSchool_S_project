@@ -1,0 +1,79 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# All Vagrant configuration is done below. The "2" in Vagrant.configure
+# configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what
+# you're doing.
+Vagrant.configure("2") do |config|
+  # The most common configuration options are documented and commented below.
+  # For a complete reference, please see the online documentation at
+  # https://docs.vagrantup.com.
+  config.vm.box = "ubuntu/focal64"
+
+     #Specific configuration
+  config.vm.provider "virtualbox" do |vb|
+      vb.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
+     # Customize the amount of memory on the VM:
+      vb.memory = "1024"
+      vb.cpus = "2" 
+  end
+     #Master-slave machine setup
+  config.vm.define "master" do |subconfig|
+      subconfig.vm.box = "ubuntu/focal64"
+      subconfig.vm.hostname = "master"
+      subconfig.vm.network "private_network", type: "dhcp"
+  end
+
+      #slave machine set-up
+  config.vm.define "slave" do |subconfig|
+      subconfig.vm.box = "ubuntu/focal64"
+      subconfig.vm.hostname = "slave"
+      subconfig.vm.network "private_network", type: "dhcp"
+  end
+
+  config.vm.provision "shell", inline: <<-SHELL
+      sudo apt-get -y avahi-daemon libnss-mdns
+  SHELL
+
+  config.vm.provision "shell", inline: <<-SHELL
+      # Install ApachE
+      sudo apt-get update && apt-get upgrade
+      sudo apt-get install -y apache2 
+      #recommend apache2 setting 
+      sudo a2enmod expires
+      sudo a2enmod headers
+      sudo a2enmod include
+      sudo a2enmod rewrite
+      #  Configure Apache to start on boot
+      sudo systemctl enable apache2
+  SHELL
+ 
+ config.vm.provision "shell", inline: <<-SHELL
+      #install php
+      sudo apt-get -y install php
+     #make php and apache2 friends
+      sudo apt-get -y install libapache2-mod-php
+     #install other php useful stuffs
+      sudo apt-get -y install php-common 
+      sudo apt-get -y install php-all-dev
+      sudo apt-get -y install php-encrypt 
+      sudo apt-get -y install php-zip
+      sudo apt-get -y install php-xml
+ SHELL
+
+ config.vm.provision "shell", inline: <<-SHELL
+      #mysql stuffs
+      sudo debconf-set-selections <<< 'mysql-server/root_password password cheche'
+      sudo debconf-set-selections <<< 'mysql-server/root_password_again password cheche'
+      #install mysql
+      sudo apt-get -y install mysql-server
+      #make php and mysql friends 
+      sudo apt-get -y install php-mysql 
+      #restart apache2   
+      sudo service apache2 restart
+ SHELL
+end
+
+
+
